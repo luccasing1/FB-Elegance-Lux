@@ -77,6 +77,16 @@
         .modal-size { background:#1e1e1e; display:inline-block; padding:6px 16px; border-radius:40px; font-size:0.8rem; margin:12px 0; }
         .modal-whatsapp { display:inline-flex; align-items:center; gap:10px; background:#25D366; color:#fff; padding:12px 24px; border-radius:40px; text-decoration:none; font-weight:500; margin-top:20px; transition:.2s; }
         .modal-whatsapp:hover { background:#1da851; }
+        /* Modal de edição de produto */
+        .edit-modal-content { max-width:600px; background:#111; border-radius:28px; padding:28px; }
+        .edit-modal-content h3 { margin-bottom:20px; font-weight:500; }
+        .edit-modal-content input, .edit-modal-content textarea, .edit-modal-content select { width:100%; background:#1a1a1a; border:1px solid #333; border-radius:32px; padding:12px 20px; font-size:0.85rem; color:#fff; margin-bottom:16px; font-family:'Inter',sans-serif; }
+        .edit-modal-content textarea { resize:vertical; }
+        .edit-modal-content .size-checkbox-group { display:flex; gap:12px; flex-wrap:wrap; margin-bottom:16px; }
+        .edit-modal-content .size-checkbox-group label { display:flex; align-items:center; gap:6px; color:#ccc; font-size:0.85rem; }
+        .edit-modal-content button { background:#fff; color:#0a0a0a; border:none; padding:10px 20px; border-radius:40px; cursor:pointer; margin-right:10px; transition:.2s; }
+        .edit-modal-content button:hover { background:#b88b4a; color:#fff; }
+        .edit-modal-content button.cancel { background:#2a2a2a; color:#ccc; }
         @media (max-width:768px) {
             .container { padding:0 20px; }
             .header-inner { flex-direction: column; align-items: center; text-align: center; }
@@ -101,7 +111,6 @@
         .payment-methods { display:flex; flex-wrap:wrap; gap:20px; justify-content:center; }
         .payment-item { font-size:0.8rem; color:#aaa; display:flex; align-items:center; gap:6px; background:#111; padding:4px 14px; border-radius:40px; border:1px solid #2a2a2a; }
         .admin-button-footer { text-align:center; }
-        /* Botão admin oculto - acesso apenas via duplo clique na logo */
         .btn-admin-footer { display: none; }
         .copyright { text-align:center; font-size:0.7rem; color:#6e6e6e; margin-top:32px; }
         .copyright a { color:#6e6e6e; text-decoration:none; transition:color .2s; }
@@ -124,8 +133,8 @@
         .admin-item-info strong { font-weight:500; color:#fff; }
         .admin-actions { display:flex; gap:8px; flex-wrap:wrap; }
         .admin-actions button { background:none; border:1px solid #3a3a3a; color:#ccc; padding:6px 14px; border-radius:30px; cursor:pointer; font-size:0.7rem; transition:.2s; }
-        .admin-actions button.edit-price { border-color:#b88b4a; color:#b88b4a; }
-        .admin-actions button.edit-price:hover { background:#b88b4a; color:#111; }
+        .admin-actions button.edit-ad { border-color:#b88b4a; color:#b88b4a; }
+        .admin-actions button.edit-ad:hover { background:#b88b4a; color:#111; }
         .admin-actions button.mark-sold { border-color:#c0392b; color:#ff9e8f; }
         .admin-actions button.mark-sold:hover { background:#c0392b; color:#fff; }
         .admin-actions button.delete-prod { border-color:#662222; color:#ff9999; }
@@ -213,14 +222,13 @@
                 <span class="payment-item">💵 Dinheiro</span>
             </div>
         </div>
-        <!-- Botão "FALE CONOSCO NO WHATSAPP" removido -->
         <div class="footer-row">
             <div class="admin-button-footer">
                 <button class="btn-admin-footer" id="adminButton">🔐 Área do Admin</button>
             </div>
         </div>
         <div class="copyright">
-            FB Elegance Lux ® – Todos os direitos reservados. Developed by <a href="https://www.instagram.com/luccasingi?igsh=MXFpaGdpN2pyd2lvMw%3D%3D&utm_source=qr" target="_blank">L.Singi</a>
+            © 2026 FB Elegance Lux. All rights reserved. Developed by <a href="https://www.instagram.com/luccasingi?igsh=MXFpaGdpN2pyd2lvMw%3D%3D&utm_source=qr" target="_blank">L.Singi</a>
         </div>
     </div>
 </footer>
@@ -252,7 +260,28 @@
             <div id="adminListaContainer"></div>
         </div>
         <button id="logoutAdminBtn" class="logout-btn">Sair do Admin</button>
-        <!-- Mensagem removida -->
+    </div>
+</div>
+
+<!-- Modal de edição de produto -->
+<div id="editProductModal" class="modal">
+    <div class="modal-content edit-modal-content">
+        <div class="modal-close" id="closeEditModal">&times;</div>
+        <h3>✎ Editar anúncio</h3>
+        <input type="text" id="editNome" placeholder="Nome do produto">
+        <textarea id="editDesc" rows="4" placeholder="Descrição completa"></textarea>
+        <input type="text" id="editPreco" placeholder="Preço (ex: R$ 299,90)">
+        <div id="editDynamicFields"></div>
+        <select id="editStatus">
+            <option value="disponiveis">Disponível</option>
+            <option value="lancamentos">Lançamento</option>
+            <option value="embreve">Em breve</option>
+            <option value="vendido">Vendido</option>
+        </select>
+        <div style="margin-top:20px;">
+            <button id="saveEditBtn">Salvar alterações</button>
+            <button id="cancelEditBtn" class="cancel">Cancelar</button>
+        </div>
     </div>
 </div>
 
@@ -291,6 +320,7 @@
         let termoBusca = '';
         let adminVisible = false;
         const adminPanel = document.getElementById('adminPanel');
+        let currentEditId = null;
 
         async function carregarProdutos() {
             try {
@@ -329,17 +359,95 @@
             return true;
         }
 
-        async function editarPrecoProduto(id, precoAtual) {
-            let novoPrecoRaw = prompt("Digite o novo preço (ex: R$ 299,90 ou 299.90):", precoAtual);
-            if (!novoPrecoRaw) return;
-            let numerico = novoPrecoRaw.replace(/[^\d,]/g, '').replace(',', '.');
-            let numero = parseFloat(numerico);
-            if (isNaN(numero)) {
-                alert("Preço inválido. Use formato como 199,90");
+        // Função para abrir modal de edição
+        function abrirEdicao(prod) {
+            currentEditId = prod.id;
+            document.getElementById('editNome').value = prod.nome || '';
+            document.getElementById('editDesc').value = prod.descricao_completa || '';
+            document.getElementById('editPreco').value = prod.preco || '';
+            document.getElementById('editStatus').value = prod.status || 'disponiveis';
+
+            const container = document.getElementById('editDynamicFields');
+            container.innerHTML = '';
+            if (prod.categoria === 'vestuario') {
+                const tamanhosDisponiveis = prod.tamanhos || [];
+                const todosTamanhos = ['PP', 'P', 'M', 'G', 'GG'];
+                const html = `
+                    <label style="display:block; margin-bottom:8px; font-size:0.8rem; color:#ccc;">Tamanhos disponíveis:</label>
+                    <div class="size-checkbox-group">
+                        ${todosTamanhos.map(t => `
+                            <label>
+                                <input type="checkbox" value="${t}" ${tamanhosDisponiveis.includes(t) ? 'checked' : ''}> ${t}
+                            </label>
+                        `).join('')}
+                    </div>
+                `;
+                container.innerHTML = html;
+            } else if (prod.categoria === 'calcados') {
+                container.innerHTML = `
+                    <input type="text" id="editNumeracao" placeholder="Numeração (ex: 35, 36, 37-40)" value="${prod.numeracao || ''}">
+                `;
+            } else {
+                // lifestyle não tem campo extra
+                container.innerHTML = '';
+            }
+
+            document.getElementById('editProductModal').style.display = 'block';
+            document.body.style.overflow = 'hidden';
+        }
+
+        async function salvarEdicao() {
+            if (!currentEditId) return;
+            const prodOriginal = produtos.find(p => p.id === currentEditId);
+            if (!prodOriginal) return;
+
+            const nome = document.getElementById('editNome').value.trim();
+            const desc = document.getElementById('editDesc').value.trim();
+            let preco = document.getElementById('editPreco').value.trim();
+            const status = document.getElementById('editStatus').value;
+
+            if (!nome || !preco) {
+                alert('Nome e preço são obrigatórios.');
                 return;
             }
-            const precoFormatado = 'R$ ' + numero.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-            await atualizarProduto(id, { preco: precoFormatado });
+            if (!preco.startsWith('R$')) preco = formatPrice(preco);
+
+            const updates = {
+                nome,
+                descricao_completa: desc,
+                preco,
+                status
+            };
+
+            if (prodOriginal.categoria === 'vestuario') {
+                const checkboxes = document.querySelectorAll('#editDynamicFields .size-checkbox-group input[type="checkbox"]');
+                const tamanhos = Array.from(checkboxes).filter(cb => cb.checked).map(cb => cb.value);
+                if (tamanhos.length === 0) {
+                    alert('Selecione pelo menos um tamanho.');
+                    return;
+                }
+                updates.tamanhos = tamanhos;
+                // Remover numeração se existir
+                updates.numeracao = null;
+            } else if (prodOriginal.categoria === 'calcados') {
+                const numeracao = document.getElementById('editNumeracao')?.value.trim();
+                if (!numeracao) {
+                    alert('Informe a numeração.');
+                    return;
+                }
+                updates.numeracao = numeracao;
+                updates.tamanhos = null;
+            } else {
+                updates.tamanhos = null;
+                updates.numeracao = null;
+            }
+
+            const sucesso = await atualizarProduto(currentEditId, updates);
+            if (sucesso) {
+                document.getElementById('editProductModal').style.display = 'none';
+                document.body.style.overflow = 'auto';
+                currentEditId = null;
+            }
         }
 
         async function alternarStatusVendido(id, statusAtual) {
@@ -461,7 +569,6 @@
                 const busca = termoBusca.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
                 filtrados = filtrados.filter(p => p.nome.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').includes(busca));
             }
-            // Ordenar: produtos não vendidos primeiro, depois vendidos (jogar para baixo)
             filtrados.sort((a,b) => {
                 if (a.status === 'vendido' && b.status !== 'vendido') return 1;
                 if (a.status !== 'vendido' && b.status === 'vendido') return -1;
@@ -596,9 +703,6 @@
             produtos.forEach(prod => {
                 const div = document.createElement('div');
                 div.className = 'admin-item';
-                let infoExtra = '';
-                if (prod.categoria === 'vestuario' && prod.tamanhos) infoExtra = ` (Tam: ${prod.tamanhos.join(',')})`;
-                if (prod.categoria === 'calcados' && prod.numeracao) infoExtra = ` (Num: ${prod.numeracao})`;
                 div.innerHTML = `
                     <div class="admin-item-info">
                         <strong>${escapeHtml(prod.nome)}</strong>
@@ -608,15 +712,15 @@
                         <span style="font-size:0.7rem;">${prod.status === 'disponiveis' ? '✓ Disponível' : (prod.status === 'lancamentos' ? '⭐ Lançamento' : (prod.status === 'embreve' ? '⏳ Em breve' : '🔴 Vendido'))}</span>
                     </div>
                     <div class="admin-actions">
-                        <button class="edit-price" data-id="${prod.id}" data-preco="${prod.preco}">✏️ Editar preço</button>
+                        <button class="edit-ad" data-id="${prod.id}">✏️ Editar anúncio</button>
                         <button class="mark-sold" data-id="${prod.id}" data-status="${prod.status}">${prod.status === 'vendido' ? '🔄 Reativar' : '🏷️ Marcar vendido'}</button>
                         <button class="delete-prod" data-id="${prod.id}">🗑️ Remover</button>
                     </div>
                 `;
                 container.appendChild(div);
             });
-            document.querySelectorAll('.edit-price').forEach(btn => {
-                btn.addEventListener('click', (e) => { const id = btn.getAttribute('data-id'); const precoAtual = btn.getAttribute('data-preco'); editarPrecoProduto(id, precoAtual); });
+            document.querySelectorAll('.edit-ad').forEach(btn => {
+                btn.addEventListener('click', (e) => { const id = btn.getAttribute('data-id'); const prod = produtos.find(p => p.id === id); if (prod) abrirEdicao(prod); });
             });
             document.querySelectorAll('.mark-sold').forEach(btn => {
                 btn.addEventListener('click', (e) => { const id = btn.getAttribute('data-id'); const statusAtual = btn.getAttribute('data-status'); alternarStatusVendido(id, statusAtual); });
@@ -640,6 +744,14 @@
         document.getElementById('searchInput').addEventListener('input', (e) => { termoBusca = e.target.value; renderizarCatalogo(); });
         document.getElementById('scrollNovidades').addEventListener('click', (e) => { e.preventDefault(); document.getElementById('product-grid')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); });
         document.getElementById('logoutAdminBtn').addEventListener('click', () => hideAdminPanel());
+
+        // Fechar modais
+        const editModal = document.getElementById('editProductModal');
+        document.getElementById('closeEditModal').addEventListener('click', () => { editModal.style.display = 'none'; document.body.style.overflow = 'auto'; currentEditId = null; });
+        document.getElementById('cancelEditBtn').addEventListener('click', () => { editModal.style.display = 'none'; document.body.style.overflow = 'auto'; currentEditId = null; });
+        document.getElementById('saveEditBtn').addEventListener('click', salvarEdicao);
+        window.addEventListener('click', (e) => { if (e.target === editModal) { editModal.style.display = 'none'; document.body.style.overflow = 'auto'; currentEditId = null; } });
+
         window.addEventListener('click', (e) => { const modal = document.getElementById('productModal'); if (e.target === modal) { modal.style.display = 'none'; document.body.style.overflow = 'auto'; } });
         document.querySelector('.modal-close').addEventListener('click', () => { document.getElementById('productModal').style.display = 'none'; document.body.style.overflow = 'auto'; });
 
