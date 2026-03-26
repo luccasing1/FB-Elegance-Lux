@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=yes">
     <title>FB · Elegance Lux | Outfits Importados</title>
+    <link rel="shortcut icon" href="favicon.ico" type="image/x-icon">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600&display=swap" rel="stylesheet">
@@ -848,6 +849,22 @@
             border-radius: 28px;
             border: 1px dashed #2a2a2a;
         }
+
+        .logout-btn {
+            background: #333;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 40px;
+            cursor: pointer;
+            margin-top: 16px;
+            font-size: 0.8rem;
+            transition: 0.2s;
+        }
+        .logout-btn:hover {
+            background: #b88b4a;
+            color: black;
+        }
     </style>
 </head>
 <body>
@@ -883,11 +900,11 @@
                 <button class="filter-btn cat-btn" data-cat="vestuario">VESTUÁRIO</button>
                 <button class="filter-btn cat-btn" data-cat="lifestyle">LIFESTYLE</button>
             </div>
-            <div class="result-info" id="result-info">✦ ADICIONE SUAS PEÇAS NO PAINEL ADMIN ✦</div>
+            <div class="result-info" id="result-info">✦ CARREGANDO ACERVO ✦</div>
         </div>
 
         <div class="product-grid" id="product-grid">
-            <div class="empty-message">✦ Seu acervo exclusivo começa aqui ✦<br>Clique em "Área do Admin" para adicionar produtos</div>
+            <div class="empty-message">✦ Seu acervo exclusivo começa aqui ✦<br>Aguarde...</div>
         </div>
     </div>
 
@@ -914,14 +931,12 @@
 
 <footer class="footer">
     <div class="container">
-        <!-- Linha 1: redes sociais -->
         <div class="footer-row">
             <div class="footer-social">
                 <a href="https://www.instagram.com/fb.elegancelux/" target="_blank">📷 @fb.elegancelux</a>
                 <a href="https://wa.me/5543996179533?text=Olá!%20Vi%20o%20site%20e%20tenho%20interesse." target="_blank">📱 (43) 99617-9533</a>
             </div>
         </div>
-        <!-- Linha 2: formas de pagamento -->
         <div class="footer-row">
             <div class="payment-methods">
                 <span class="payment-item">💳 Cartão de Crédito</span>
@@ -930,7 +945,6 @@
                 <span class="payment-item">💵 Dinheiro</span>
             </div>
         </div>
-        <!-- Linha 3: FALE CONOSCO NO WHATSAPP (acima do admin) -->
         <div class="footer-row">
             <div class="whatsapp-footer">
                 <a href="https://wa.me/5543996179533?text=Olá!%20Gostaria%20de%20mais%20informações%20sobre%20os%20produtos." class="btn-whatsapp-footer" target="_blank">
@@ -938,15 +952,13 @@
                 </a>
             </div>
         </div>
-        <!-- Linha 4: Área do Admin -->
         <div class="footer-row">
             <div class="admin-button-footer">
                 <button class="btn-admin-footer" id="adminButton">🔐 Área do Admin</button>
             </div>
         </div>
-        <!-- Copyright -->
         <div class="copyright">
-            FB Elegance Lux ® – Todos os direitos reservados. Developed by L.S
+            FB Elegance Lux ® – Todos os direitos reservados.
         </div>
     </div>
 </footer>
@@ -977,6 +989,7 @@
             <h3 style="font-weight:400; font-size:1rem;">Produtos cadastrados</h3>
             <div id="adminListaContainer"></div>
         </div>
+        <button id="logoutAdminBtn" class="logout-btn">Sair do Admin</button>
         <p style="font-size:0.7rem; color:#666; margin-top:20px; text-align:center;">Clique duas vezes no logotipo ou use o botão abaixo</p>
     </div>
 </div>
@@ -1003,38 +1016,142 @@
         </div>
     </div>
 </div>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-    // [Script completo com todas as funcionalidades anteriores, incluindo setas, modal, admin, etc.]
+    // Configuração Supabase
+    const SUPABASE_URL = "https://bachgtlwmaroytvhhvfn.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJhY2hndGx3bWFyb3l0dmhodmZuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0OTQ4MDAsImV4cCI6MjA5MDA3MDgwMH0.J8ajqwCRrAPLkfYMuXYWs82eO6x6s4A_HteoqOtNFFI";
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
     let produtos = [];
-
-const supabaseClient = supabase.createClient(
-  'https://ypolzuairpolchszvznu.supabase.co',
-  'sb_publishable_j942QycOJ6EkVE7pGtLxmw_LTxN3Uql'
-);
-    async function loadFromStorage() {
-    const { data, error } = await supabaseClient
-        .from('produtos')
-        .select('*');
-
-    if (error) {
-        console.log('Erro ao carregar:', error);
-        return;
-    }
-
-    produtos = data.map(p => ({
-        ...p,
-        images: p.images || []
-    }));
-
-    renderizarCatalogo();
-    renderizarAdminLista();
-}
-
-
     let filtroCategoria = 'todos';
     let termoBusca = '';
+    let adminVisible = false;
+    const adminPanel = document.getElementById('adminPanel');
 
+    // ========== FUNÇÕES PRINCIPAIS ==========
+    async function carregarProdutos() {
+        const { data, error } = await supabase
+            .from('produtos')
+            .select('*')
+            .order('created_at', { ascending: false });
+        if (error) {
+            console.error('Erro ao carregar produtos:', error);
+            document.getElementById('result-info').innerText = '❌ Erro ao carregar produtos';
+            return;
+        }
+        produtos = data || [];
+        renderizarCatalogo();
+        renderizarAdminLista();
+    }
+
+    async function adicionarProduto() {
+        const nome = document.getElementById('prodNome').value.trim();
+        const desc = document.getElementById('prodDesc').value.trim();
+        let preco = document.getElementById('prodPreco').value.trim();
+        const files = document.getElementById('prodImagens').files;
+        const categoria = document.getElementById('prodCategoria').value;
+        const status = document.getElementById('prodStatus').value;
+
+        if (!nome || !preco || files.length === 0) {
+            alert('Preencha nome, preço e selecione pelo menos uma imagem.');
+            return;
+        }
+        if (!preco.startsWith('R$')) preco = formatPrice(preco);
+
+        // Upload das imagens para o bucket "produtos"
+        const uploadedUrls = [];
+        for (let file of files) {
+            const fileName = `${Date.now()}_${file.name}`;
+            const { data, error } = await supabase.storage
+                .from('produtos')
+                .upload(fileName, file);
+            if (error) {
+                console.error('Erro upload:', error);
+                alert('Falha ao enviar imagem: ' + error.message);
+                return;
+            }
+            const { data: publicUrlData } = supabase.storage
+                .from('produtos')
+                .getPublicUrl(fileName);
+            uploadedUrls.push(publicUrlData.publicUrl);
+        }
+
+        const novoProduto = {
+            nome,
+            descricao_completa: desc,
+            preco,
+            images: uploadedUrls,
+            categoria,
+            status
+        };
+
+        if (categoria === 'vestuario') {
+            const checkboxes = document.querySelectorAll('#dynamicFieldsContainer input[type="checkbox"]');
+            const tamanhos = Array.from(checkboxes).filter(cb => cb.checked).map(cb => cb.value);
+            if (tamanhos.length === 0) {
+                alert('Selecione pelo menos um tamanho.');
+                return;
+            }
+            novoProduto.tamanhos = tamanhos;
+        } else if (categoria === 'calcados') {
+            const numeracao = document.getElementById('numeracaoInput')?.value.trim();
+            if (!numeracao) {
+                alert('Informe a numeração.');
+                return;
+            }
+            novoProduto.numeracao = numeracao;
+        }
+
+        const { data, error } = await supabase
+            .from('produtos')
+            .insert([novoProduto])
+            .select();
+        if (error) {
+            alert('Erro ao salvar: ' + error.message);
+            return;
+        }
+
+        produtos.push(data[0]);
+        renderizarCatalogo();
+        renderizarAdminLista();
+
+        // Limpa formulário
+        document.getElementById('prodNome').value = '';
+        document.getElementById('prodDesc').value = '';
+        document.getElementById('prodPreco').value = 'R$ ';
+        document.getElementById('prodImagens').value = '';
+        updateDynamicFields();
+        alert('Produto adicionado com sucesso!');
+    }
+
+    async function excluirProduto(id) {
+        if (!confirm('Excluir este produto?')) return;
+
+        const produto = produtos.find(p => p.id === id);
+        if (produto && produto.images && produto.images.length) {
+            for (let url of produto.images) {
+                const fileName = url.split('/').pop();
+                await supabase.storage.from('produtos').remove([fileName]);
+            }
+        }
+
+        const { error } = await supabase
+            .from('produtos')
+            .delete()
+            .eq('id', id);
+        if (error) {
+            alert('Erro ao excluir: ' + error.message);
+            return;
+        }
+
+        produtos = produtos.filter(p => p.id !== id);
+        renderizarCatalogo();
+        renderizarAdminLista();
+    }
+
+    // ========== RENDERIZAÇÃO DO CATÁLOGO ==========
     function renderizarCatalogo() {
         const grid = document.getElementById('product-grid');
         const info = document.getElementById('result-info');
@@ -1072,7 +1189,7 @@ const supabaseClient = supabase.createClient(
             } else if (prod.categoria === 'calcados' && prod.numeracao) {
                 sizeHtml = `<div class="product-size-info">Numeração: ${prod.numeracao}</div>`;
             }
-            
+
             card.innerHTML = `
                 <div class="product-image-container">
                     <span class="status-badge ${statusClass}">${statusLabel}</span>
@@ -1093,12 +1210,11 @@ const supabaseClient = supabase.createClient(
             `;
             grid.appendChild(card);
         });
-        
+
         document.querySelectorAll('.nav-arrow-left, .nav-arrow-right').forEach(arrow => {
             arrow.removeEventListener('click', handleArrowClick);
             arrow.addEventListener('click', handleArrowClick);
         });
-        
         document.querySelectorAll('.btn-whatsapp-card').forEach(btn => {
             btn.removeEventListener('click', handleWhatsAppClick);
             btn.addEventListener('click', handleWhatsAppClick);
@@ -1111,7 +1227,6 @@ const supabaseClient = supabase.createClient(
             card.removeEventListener('click', handleCardClick);
             card.addEventListener('click', handleCardClick);
         });
-        
         document.querySelectorAll('.product-card').forEach(card => {
             const prodId = parseInt(card.getAttribute('data-id'));
             const prod = produtos.find(p => p.id === prodId);
@@ -1120,15 +1235,14 @@ const supabaseClient = supabase.createClient(
             }
         });
     }
-    
+
     function handleArrowClick(e) {
         e.stopPropagation();
         const arrow = e.currentTarget;
-        const prodId = parseInt(arrow.getAttribute('data-id'));
+        const prodId = arrow.getAttribute('data-id');
         const direction = arrow.getAttribute('data-dir');
         const prod = produtos.find(p => p.id === prodId);
         if (!prod || !prod.images || prod.images.length <= 1) return;
-        
         const card = arrow.closest('.product-card');
         let currentIdx = parseInt(card.dataset.currentIndex || '0');
         if (direction === 'prev') {
@@ -1143,7 +1257,7 @@ const supabaseClient = supabase.createClient(
 
     function handleWhatsAppClick(e) {
         e.stopPropagation();
-        const id = parseInt(e.currentTarget.getAttribute('data-id'));
+        const id = e.currentTarget.getAttribute('data-id');
         const prod = produtos.find(p => p.id === id);
         if (prod) {
             const numero = "5543996179533";
@@ -1157,17 +1271,17 @@ const supabaseClient = supabase.createClient(
 
     function handleDetailsClick(e) {
         e.stopPropagation();
-        const id = parseInt(e.currentTarget.getAttribute('data-id'));
+        const id = e.currentTarget.getAttribute('data-id');
         const prod = produtos.find(p => p.id === id);
         if (prod) abrirModal(prod);
     }
 
     function handleCardClick(e) {
-        if (e.target.classList.contains('btn-whatsapp-card') || e.target.classList.contains('btn-details') || 
+        if (e.target.classList.contains('btn-whatsapp-card') || e.target.classList.contains('btn-details') ||
             e.target.classList.contains('nav-arrow') || e.target.classList.contains('nav-arrow-left') || e.target.classList.contains('nav-arrow-right') ||
             e.target.closest('.nav-arrow')) return;
         const card = e.currentTarget;
-        const id = parseInt(card.getAttribute('data-id'));
+        const id = card.getAttribute('data-id');
         const prod = produtos.find(p => p.id === id);
         if (prod) abrirModal(prod);
     }
@@ -1181,7 +1295,7 @@ const supabaseClient = supabase.createClient(
         else categoriaLabel = 'LIFESTYLE';
         document.getElementById('modalCategory').innerText = categoriaLabel;
         document.getElementById('modalPrice').innerText = prod.preco;
-        document.getElementById('modalDesc').innerText = prod.descricaoCompleta || prod.descricao || '';
+        document.getElementById('modalDesc').innerText = prod.descricao_completa || '';
         let sizeText = '';
         if (prod.categoria === 'vestuario' && prod.tamanhos && prod.tamanhos.length) {
             sizeText = `Tamanhos disponíveis: ${prod.tamanhos.join(', ')}`;
@@ -1218,28 +1332,7 @@ const supabaseClient = supabase.createClient(
         document.body.style.overflow = 'hidden';
     }
 
-    document.querySelector('.modal-close').addEventListener('click', () => {
-        document.getElementById('productModal').style.display = 'none';
-        document.body.style.overflow = 'auto';
-    });
-    window.addEventListener('click', (e) => {
-        const modal = document.getElementById('productModal');
-        if (e.target === modal) {
-            modal.style.display = 'none';
-            document.body.style.overflow = 'auto';
-        }
-    });
-
-    function escapeHtml(str) {
-        if (!str) return '';
-        return str.replace(/[&<>]/g, function(m) {
-            if (m === '&') return '&amp;';
-            if (m === '<') return '&lt;';
-            if (m === '>') return '&gt;';
-            return m;
-        });
-    }
-
+    // ========== ADMIN ==========
     function renderizarAdminLista() {
         const container = document.getElementById('adminListaContainer');
         if (!container) return;
@@ -1268,12 +1361,8 @@ const supabaseClient = supabase.createClient(
         });
         document.querySelectorAll('.excluir-produto').forEach(btn => {
             btn.addEventListener('click', (e) => {
-                const id = parseInt(btn.getAttribute('data-id'));
-                if (confirm('Excluir este produto do catálogo?')) {
-                    produtos = produtos.filter(p => p.id !== id);
-                    renderizarCatalogo();
-                    renderizarAdminLista();
-                }
+                const id = btn.getAttribute('data-id');
+                excluirProduto(id);
             });
         });
     }
@@ -1321,87 +1410,49 @@ const supabaseClient = supabase.createClient(
         }
     }
 
-    async function adicionarProduto(){
-        const nome = document.getElementById('prodNome').value.trim();
-        const descCompleta = document.getElementById('prodDesc').value.trim();
-        let preco = document.getElementById('prodPreco').value.trim();
-        const files = document.getElementById('prodImagens').files;
-        const categoria = document.getElementById('prodCategoria').value;
-        const status = document.getElementById('prodStatus').value;
-        if (!nome || !preco || files.length === 0) {
-            alert('Preencha nome, preço e selecione pelo menos uma imagem.');
+    function escapeHtml(str) {
+        if (!str) return '';
+        return str.replace(/[&<>]/g, function(m) {
+            if (m === '&') return '&amp;';
+            if (m === '<') return '&lt;';
+            if (m === '>') return '&gt;';
+            return m;
+        });
+    }
+
+    // ========== AUTENTICAÇÃO ADMIN ==========
+    async function loginAdmin() {
+        const email = prompt('Digite o e-mail do administrador:');
+        if (!email) return;
+        const senha = prompt('Digite a senha:');
+        if (!senha) return;
+
+        const { error } = await supabase.auth.signInWithPassword({ email, senha });
+        if (error) {
+            alert('Falha no login: ' + error.message);
             return;
         }
-        if (!preco.startsWith('R$')) preco = formatPrice(preco);
-        const images = [];
-        let loaded = 0;
-        for (let i = 0; i < files.length; i++) {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                images.push(e.target.result);
-                loaded++;
-                if (loaded === files.length) {
-                    const novoId = produtos.length > 0 ? Math.max(...produtos.map(p => p.id)) + 1 : 1;
-                    const novoProduto = {
-                        id: novoId,
-                        nome: nome,
-                        descricaoCompleta: descCompleta,
-                        preco: preco,
-                        images: images,
-                        categoria: categoria,
-                        status: status
-                    };
-                    if (categoria === 'vestuario') {
-                        const checkboxes = document.querySelectorAll('#dynamicFieldsContainer input[type="checkbox"]');
-                        const tamanhos = Array.from(checkboxes).filter(cb => cb.checked).map(cb => cb.value);
-                        if (tamanhos.length === 0) {
-                            alert('Selecione pelo menos um tamanho.');
-                            return;
-                        }
-                        novoProduto.tamanhos = tamanhos;
-                    } else if (categoria === 'calcados') {
-                        const numeracao = document.getElementById('numeracaoInput')?.value.trim();
-                        if (!numeracao) {
-                            alert('Informe a numeração.');
-                            return;
-                        }
-                        novoProduto.numeracao = numeracao;
-                    }
-const { error } = await supabaseClient
-    .from('produtos')
-    .insert([novoProduto]);
+        adminPanel.style.display = 'block';
+        adminVisible = true;
+        renderizarAdminLista();
+    }
 
-if (error) {
-    alert('Erro ao salvar no banco');
-    console.log(error);
-    return;
-}
+    async function logoutAdmin() {
+        await supabase.auth.signOut();
+        adminPanel.style.display = 'none';
+        adminVisible = false;
+        alert('Você saiu do modo admin.');
+    }
 
-loadFromStorage();
-                    document.getElementById('prodNome').value = '';
-                    document.getElementById('prodDesc').value = '';
-                    document.getElementById('prodPreco').value = 'R$ ';
-                    document.getElementById('prodImagens').value = '';
-                    updateDynamicFields();
-                    alert('Produto adicionado com sucesso!');
-                }
-            };
-            reader.readAsDataURL(files[i]);
+    function toggleAdmin() {
+        if (adminVisible) {
+            logoutAdmin();
+        } else {
+            loginAdmin();
         }
     }
 
-    let adminVisible = false;
-    const adminPanel = document.getElementById('adminPanel');
-    function showAdminWithPassword() {
-        const senha = prompt("Digite a senha do administrador:");
-        if (senha === "fbadmin") {
-            adminPanel.style.display = 'block';
-            renderizarAdminLista();
-            adminVisible = true;
-        } else if (senha !== null) alert("Senha incorreta");
-    }
-    function hideAdmin() { adminPanel.style.display = 'none'; adminVisible = false; }
-    function toggleAdmin() { if (adminVisible) hideAdmin(); else showAdminWithPassword(); }
+    // ========== EVENTOS E INICIALIZAÇÃO ==========
     document.getElementById('adminButton').addEventListener('click', toggleAdmin);
     document.getElementById('adminTriggerLogo').addEventListener('dblclick', toggleAdmin);
     document.getElementById('btnAdicionarProduto').addEventListener('click', adicionarProduto);
@@ -1429,10 +1480,13 @@ loadFromStorage();
         e.preventDefault();
         document.getElementById('product-grid')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
-    loadFromStorage();
+    document.getElementById('logoutAdminBtn').addEventListener('click', logoutAdmin);
+
+    // Inicialização
     adminPanel.style.display = 'none';
     adminVisible = false;
     updateDynamicFields();
+    carregarProdutos();
 </script>
 </body>
 </html>
