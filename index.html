@@ -10,6 +10,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
+        /* Seu CSS permanece idêntico ao original */
         * {
             margin: 0;
             padding: 0;
@@ -32,7 +33,6 @@
             padding: 0 32px;
         }
 
-        /* Header escuro */
         .header {
             background-color: #000000;
             padding: 28px 0 20px;
@@ -98,7 +98,6 @@
             border-bottom-color: #ffffff;
         }
 
-        /* Barra de pesquisa */
         .search-container {
             margin: 32px 0 16px;
             display: flex;
@@ -143,7 +142,6 @@
             color: #666;
         }
 
-        /* Filtros - categoria */
         .filters-section {
             margin: 24px 0 32px;
         }
@@ -188,7 +186,6 @@
             letter-spacing: 0.5px;
         }
 
-        /* Grade produtos */
         .product-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -231,7 +228,6 @@
             transform: scale(1.02);
         }
 
-        /* Setas de navegação */
         .nav-arrow {
             position: absolute;
             top: 50%;
@@ -269,7 +265,6 @@
             right: 12px;
         }
 
-        /* Badge de status */
         .status-badge {
             position: absolute;
             top: 16px;
@@ -363,7 +358,6 @@
             color: #ffffff;
         }
 
-        /* Botão detalhes */
         .btn-details {
             display: inline-flex;
             align-items: center;
@@ -388,7 +382,6 @@
             color: #ffffff;
         }
 
-        /* Modal */
         .modal {
             display: none;
             position: fixed;
@@ -551,7 +544,6 @@
             }
         }
 
-        /* Seção diferenciais (quadrados) */
         .feature-section {
             border-top: 1px solid #1f1f1f;
             border-bottom: 1px solid #1f1f1f;
@@ -591,7 +583,6 @@
             color: #9a9a9a;
         }
 
-        /* Footer reorganizado */
         .footer {
             background-color: #000000;
             padding: 48px 0 32px;
@@ -697,7 +688,6 @@
             margin-top: 32px;
         }
 
-        /* Admin panel (mesmo estilo anterior) */
         .admin-panel {
             max-width: 680px;
             margin: 60px auto 40px;
@@ -1019,7 +1009,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-    // Configuração Supabase
+    // Configuração Supabase - única declaração
     const SUPABASE_URL = "https://bachgtlwmaroytvhhvfn.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJhY2hndGx3bWFyb3l0dmhodmZuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0OTQ4MDAsImV4cCI6MjA5MDA3MDgwMH0.J8ajqwCRrAPLkfYMuXYWs82eO6x6s4A_HteoqOtNFFI";
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -1228,7 +1218,7 @@
             card.addEventListener('click', handleCardClick);
         });
         document.querySelectorAll('.product-card').forEach(card => {
-            const prodId = parseInt(card.getAttribute('data-id'));
+            const prodId = card.getAttribute('data-id');
             const prod = produtos.find(p => p.id === prodId);
             if (prod && !card.dataset.currentIndex) {
                 card.dataset.currentIndex = '0';
