@@ -5,9 +5,17 @@
     let adminVisible = false;
     let currentEditId = null;
 
-    const SUPABASE_URL = 'https://bachgtlwmaroytvhhvfn.supabase.co';
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJhY2hndGx3bWFyb3l0dmhodmZuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0OTQ4MDAsImV4cCI6MjA5MDA3MDgwMH0.J8ajqwCRrAPLkfYMuXYWs82eO6x6s4A_HteoqOtNFFI';
-    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    // ✅ Todas as chamadas ao banco passam pelo server.js — nenhuma chave exposta no frontend
+    const API_BASE = '/api/products';
+
+    async function apiFetch(path = '', options = {}) {
+        const res = await fetch(API_BASE + path, options);
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({ error: res.statusText }));
+            throw new Error(err.error || res.statusText);
+        }
+        return res.json();
+    }
 
     const adminPanel = document.getElementById('adminPanel');
     const toast = document.getElementById('toastNotification');
@@ -73,14 +81,10 @@
         window.open(`https://wa.me/5543996179533?text=${msg}`, '_blank');
     }
 
-    // Carregar produtos
+    // ✅ Carregar produtos via API (sem Supabase no frontend)
     async function carregarProdutos() {
         try {
-            const { data, error } = await supabase
-                .from('produtos')
-                .select('*')
-                .order('created_at', { ascending: false });
-            if (error) throw error;
+            const data = await apiFetch();
             produtos = Array.isArray(data) ? data : [];
             renderizarCatalogo();
             renderizarSecoesCuradas();
@@ -89,7 +93,7 @@
             console.error('Falha ao carregar produtos:', err);
             const grid = document.getElementById('product-grid');
             if (grid) grid.innerHTML = '<div class="empty-message">Erro ao carregar produtos. Veja o console do navegador.</div>';
-            showToast('Erro ao carregar o estoque do Supabase.', true);
+            showToast('Erro ao carregar o estoque.', true);
         }
     }
 
@@ -204,43 +208,39 @@
         document.body.style.overflow = 'hidden';
     }
 
-    // Fechar modal de detalhes
     document.getElementById('productModalClose').addEventListener('click', () => {
         document.getElementById('productModal').style.display = 'none';
         document.body.style.overflow = 'auto';
     });
     window.addEventListener('click', e => { if (e.target === document.getElementById('productModal')) { document.getElementById('productModal').style.display = 'none'; document.body.style.overflow = 'auto'; } });
 
-    // Admin
+    // ✅ Admin: todas as operações via API
     async function atualizarProduto(id, updates) {
         try {
-            const { data, error } = await supabase
-                .from('produtos')
-                .update(updates)
-                .eq('id', id)
-                .select();
-            if (error) throw error;
-            const updated = data[0];
+            const updated = await apiFetch(`/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(updates)
+            });
             const index = produtos.findIndex(p => p.id === id);
             if (index !== -1) produtos[index] = updated;
             renderizarCatalogo(); renderizarSecoesCuradas();
             if (adminVisible) renderizarAdminLista();
             return true;
-        } catch(err) { console.error(err); return false; }
+        } catch(err) { console.error(err); showToast('Erro ao atualizar produto.', true); return false; }
     }
+
     async function excluirProduto(id) {
         if (!confirm('Excluir este produto permanentemente?')) return;
         try {
-            const { error } = await supabase
-                .from('produtos')
-                .delete()
-                .eq('id', id);
-            if (error) throw error;
+            await apiFetch(`/${id}`, { method: 'DELETE' });
             produtos = produtos.filter(p => p.id !== id);
             renderizarCatalogo(); renderizarSecoesCuradas();
             if (adminVisible) renderizarAdminLista();
-        } catch(err) { console.error(err); }
+            showToast('Produto removido.');
+        } catch(err) { console.error(err); showToast('Erro ao remover produto.', true); }
     }
+
     async function abrirEdicao(prod) {
         currentEditId = prod.id;
         document.getElementById('editNome').value = prod.nome;
@@ -261,6 +261,7 @@
         document.getElementById('editModal').style.display = 'flex';
         document.body.style.overflow = 'hidden';
     }
+
     function updateEditSizeFields(prod) {
         const container = document.getElementById('editSizeContainer');
         container.innerHTML = '';
@@ -276,10 +277,12 @@
             container.innerHTML = `<label>Numeração</label><input type="text" id="editNumeracao" value="${prod.numeracao || ''}" placeholder="Ex: 35, 36, 37-40">`;
         }
     }
+
     document.getElementById('editCategoria').addEventListener('change', () => {
         const prod = produtos.find(p => p.id === currentEditId);
         if (prod) updateEditSizeFields({ ...prod, categoria: document.getElementById('editCategoria').value });
     });
+
     document.getElementById('editSaveBtn').addEventListener('click', async () => {
         const nome = document.getElementById('editNome').value.trim();
         const desc = document.getElementById('editDesc').value.trim();
@@ -297,14 +300,12 @@
             numeracao = document.getElementById('editNumeracao')?.value.trim();
             if (!numeracao) { alert('Informe a numeração'); return; }
         }
-        const newFiles = document.getElementById('editNewImages').files;
         const existingImages = produtos.find(p => p.id === currentEditId).images || [];
         let updatedImages = [...existingImages];
         document.querySelectorAll('#editImagesContainer .remove-image-btn').forEach(btn => {
             const idx = parseInt(btn.getAttribute('data-index'));
             if (!isNaN(idx)) updatedImages.splice(idx, 1);
         });
-        // Note: File upload needs backend handling, simplified here
         const updates = { nome, descricao_completa: desc, preco, categoria, status, images: updatedImages };
         if (categoria === 'vestuario') updates.tamanhos = tamanhos;
         else if (categoria === 'calcados') updates.numeracao = numeracao;
@@ -314,6 +315,7 @@
         document.body.style.overflow = 'auto';
         showToast('Produto atualizado!');
     });
+
     document.getElementById('editCancelBtn').addEventListener('click', () => {
         document.getElementById('editModal').style.display = 'none';
         document.body.style.overflow = 'auto';
@@ -322,6 +324,7 @@
         document.getElementById('editModal').style.display = 'none';
         document.body.style.overflow = 'auto';
     });
+
     function renderizarAdminLista() {
         const container = document.getElementById('adminListaContainer');
         if (!container) return;
@@ -349,10 +352,13 @@
         document.querySelectorAll('.mark-sold').forEach(btn => btn.addEventListener('click', (e) => { const id = btn.getAttribute('data-id'); const statusAtual = btn.getAttribute('data-status'); alternarStatusVendido(id, statusAtual); }));
         document.querySelectorAll('.delete-prod').forEach(btn => btn.addEventListener('click', (e) => { const id = btn.getAttribute('data-id'); excluirProduto(id); }));
     }
+
     async function alternarStatusVendido(id, statusAtual) {
         let novoStatus = (statusAtual === 'vendido') ? 'disponiveis' : 'vendido';
         await atualizarProduto(id, { status: novoStatus });
     }
+
+    // ✅ Adicionar produto via API
     async function adicionarProduto() {
         const nome = document.getElementById('prodNome').value.trim();
         const desc = document.getElementById('prodDesc').value.trim();
@@ -375,52 +381,44 @@
             data.numeracao = numeracao;
         }
         try {
-            const { data: result, error } = await supabase
-                .from('produtos')
-                .insert([data])
-                .select();
-            if (error) throw error;
-            produtos.push(result[0]);
+            const result = await apiFetch('', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            produtos.unshift(result);
             renderizarCatalogo(); renderizarSecoesCuradas();
             if (adminVisible) renderizarAdminLista();
             document.getElementById('prodNome').value = ''; document.getElementById('prodDesc').value = '';
             document.getElementById('prodPreco').value = 'R$ '; document.getElementById('prodImagens').value = '';
             updateDynamicFields();
-            alert('Produto adicionado com sucesso!');
-        } catch(err) { console.error(err); }
+            showToast('Produto adicionado com sucesso!');
+        } catch(err) { console.error(err); showToast('Erro ao adicionar produto.', true); }
     }
+
     function formatPrice(v) { let n = v.replace(/\D/g, ''); if (!n) return 'R$ '; let num = parseFloat(n) / 100; return 'R$ ' + num.toLocaleString('pt-BR', { minimumFractionDigits: 2 }); }
     function updateDynamicFields() { const cat = document.getElementById('prodCategoria').value; const cont = document.getElementById('dynamicFieldsContainer'); cont.innerHTML = ''; if (cat === 'vestuario') cont.innerHTML = `<div class="dynamic-field"><label>Tamanhos disponíveis:</label><div class="size-checkbox-group"><label><input type="checkbox" value="PP"> PP</label><label><input type="checkbox" value="P"> P</label><label><input type="checkbox" value="M"> M</label><label><input type="checkbox" value="G"> G</label><label><input type="checkbox" value="GG"> GG</label></div></div>`; else if (cat === 'calcados') cont.innerHTML = `<div class="dynamic-field"><input type="text" id="numeracaoInput" placeholder="Numeração (ex: 35, 36, 37-40)"></div>`; }
     function escapeHtml(s) { if (!s) return ''; return s.replace(/[&<>]/g, m => { if (m === '&') return '&amp;'; if (m === '<') return '&lt;'; if (m === '>') return '&gt;'; return m; }); }
 
-    // Header shrink on scroll
     const header = document.querySelector('.header');
     window.addEventListener('scroll', () => {
-        if (window.scrollY > 10) {
-            header.classList.add('shrink');
-        } else {
-            header.classList.remove('shrink');
-        }
+        if (window.scrollY > 10) header.classList.add('shrink');
+        else header.classList.remove('shrink');
     });
 
-    // Login Admin via Modal
     const loginModal = document.getElementById('loginModal');
     function showLoginModal() { loginModal.style.display = 'flex'; document.body.style.overflow = 'hidden'; }
     function hideLoginModal() { loginModal.style.display = 'none'; document.body.style.overflow = 'auto'; }
     let logoClickTimer = null;
     const logoElement = document.getElementById('adminTriggerLogo');
     logoElement.addEventListener('click', () => {
-        if (logoClickTimer) return;
-        logoClickTimer = setTimeout(() => {
-            window.location.reload();
-            logoClickTimer = null;
-        }, 250);
+        // Cancela timer anterior se existir, reinicia sempre
+        if (logoClickTimer) clearTimeout(logoClickTimer);
+        logoClickTimer = setTimeout(() => { logoClickTimer = null; window.location.reload(); }, 350);
     });
     logoElement.addEventListener('dblclick', () => {
-        if (logoClickTimer) {
-            clearTimeout(logoClickTimer);
-            logoClickTimer = null;
-        }
+        // Duplo clique cancela o reload e abre o login admin
+        if (logoClickTimer) { clearTimeout(logoClickTimer); logoClickTimer = null; }
         showLoginModal();
     });
     document.getElementById('loginModalClose').addEventListener('click', hideLoginModal);
