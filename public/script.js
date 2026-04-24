@@ -398,7 +398,10 @@
     const loginModal = document.getElementById('loginModal');
     function showLoginModal() { loginModal.style.display = 'flex'; document.body.style.overflow = 'hidden'; }
     function hideLoginModal() { loginModal.style.display = 'none'; document.body.style.overflow = 'auto'; }
-    document.getElementById('adminTriggerLogo').addEventListener('click', () => window.location.reload());
+    const isMobile = () => window.innerWidth <= 768 || navigator.maxTouchPoints > 0 || /Mobi|Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    if (isMobile()) {
+        document.getElementById('adminTriggerLogo').addEventListener('click', () => window.location.reload());
+    }
     document.getElementById('adminTriggerLogo').addEventListener('dblclick', showLoginModal);
     document.getElementById('loginModalClose').addEventListener('click', hideLoginModal);
     window.addEventListener('click', e => { if (e.target === loginModal) hideLoginModal(); });
