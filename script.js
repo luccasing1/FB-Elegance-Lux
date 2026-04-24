@@ -424,8 +424,14 @@
             return;
         }
         
-        if (!preco.startsWith('R$')) {
-            preco = formatPrice(preco);
+        // Usa o valor bruto armazenado no data attribute
+        const rawDigits = document.getElementById('prodPreco').dataset.rawValue || '';
+        let preco = 'R$ ';
+        if (rawDigits) {
+            const numValue = parseFloat(rawDigits) / 100;
+            preco += numValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+        } else {
+            preco += ' ';
         }
         
         const formData = new FormData();
@@ -609,11 +615,55 @@
     document.getElementById('btnAdicionarProduto').addEventListener('click', adicionarProduto);
     document.getElementById('prodCategoria').addEventListener('change', updateDynamicFields);
     document.getElementById('prodPreco').addEventListener('input', function(e){
-        let raw = e.target.value;
-        let formatted = formatPrice(raw);
-        e.target.value = formatted;
-        // Posiciona o cursor no final do valor formatado
-        e.target.setSelectionRange(formatted.length, formatted.length);
+        const input = e.target;
+        const cursorPosition = input.selectionStart;
+        const rawValue = input.value;
+
+        // Se o valor está vazio ou só tem "R$ ", limpa os dados
+        if (!rawValue || rawValue === 'R$ ') {
+            input.dataset.rawValue = '';
+            input.value = 'R$ ';
+            input.setSelectionRange(3, 3);
+            return;
+        }
+
+        // Remove "R$ " se existir e mantém apenas dígitos
+        let digitsOnly = rawValue.replace(/^R\$\s*/, '').replace(/\D/g, '');
+
+        // Limita a 8 dígitos (para evitar números muito grandes)
+        digitsOnly = digitsOnly.substring(0, 8);
+
+        // Armazena os dígitos brutos
+        input.dataset.rawValue = digitsOnly;
+
+        // Formata para exibição
+        let displayValue = 'R$ ';
+        if (digitsOnly) {
+            // Converte para número e formata
+            const numValue = parseFloat(digitsOnly) / 100;
+            displayValue += numValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+        } else {
+            displayValue += ' ';
+        }
+
+        input.value = displayValue;
+
+        // Calcula a nova posição do cursor baseada nos dígitos digitados
+        // O cursor deve ficar após "R$ " mais a quantidade de dígitos formatados
+        let newCursorPos = 3; // Após "R$ "
+        if (digitsOnly.length > 0) {
+            // Para valores com até 2 dígitos: cursor fica no final
+            if (digitsOnly.length <= 2) {
+                newCursorPos = displayValue.length;
+            } else {
+                // Para valores maiores, cursor fica antes da vírgula
+                const integerPart = digitsOnly.slice(0, -2);
+                const formattedInteger = parseInt(integerPart).toLocaleString('pt-BR');
+                newCursorPos = 3 + formattedInteger.length;
+            }
+        }
+
+        input.setSelectionRange(newCursorPos, newCursorPos);
     });
     
     document.querySelectorAll('.cat-btn').forEach(btn => btn.addEventListener('click', () => { filtroCategoria = btn.getAttribute('data-cat'); document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active'); renderizarCatalogo(); }));
