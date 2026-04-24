@@ -5,7 +5,9 @@
     let adminVisible = false;
     let currentEditId = null;
 
-    const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') ? '/api' : '/.netlify/functions';
+    const SUPABASE_URL = 'https://bachgtlwmaroytvhhvfn.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJhY2hndGx3bWFyb3l0dmhodmZuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0OTQ4MDAsImV4cCI6MjA5MDA3MDgwMH0.J8ajqwCRrAPLkfYMuXYWs82eO6x6s4A_HteoqOtNFFI';
+    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     const adminPanel = document.getElementById('adminPanel');
     const toast = document.getElementById('toastNotification');
@@ -74,9 +76,12 @@
     // Carregar produtos
     async function carregarProdutos() {
         try {
-            const response = await fetch(`${API_BASE}/products`);
-            if (!response.ok) throw new Error('Erro ao carregar produtos');
-            produtos = await response.json();
+            const { data, error } = await supabase
+                .from('produtos')
+                .select('*')
+                .order('created_at', { ascending: false });
+            if (error) throw error;
+            produtos = data || [];
             renderizarCatalogo();
             renderizarSecoesCuradas();
             if(adminVisible) renderizarAdminLista();
@@ -204,14 +209,13 @@
     // Admin
     async function atualizarProduto(id, updates) {
         try {
-            const url = window.location.hostname === 'localhost' ? `${API_BASE}/products/${id}` : `${API_BASE}/products?id=${id}`;
-            const response = await fetch(url, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(updates)
-            });
-            if (!response.ok) throw new Error('Erro ao atualizar');
-            const updated = await response.json();
+            const { data, error } = await supabase
+                .from('produtos')
+                .update(updates)
+                .eq('id', id)
+                .select();
+            if (error) throw error;
+            const updated = data[0];
             const index = produtos.findIndex(p => p.id === id);
             if (index !== -1) produtos[index] = updated;
             renderizarCatalogo(); renderizarSecoesCuradas();
@@ -222,9 +226,11 @@
     async function excluirProduto(id) {
         if (!confirm('Excluir este produto permanentemente?')) return;
         try {
-            const url = window.location.hostname === 'localhost' ? `${API_BASE}/products/${id}` : `${API_BASE}/products?id=${id}`;
-            const response = await fetch(url, { method: 'DELETE' });
-            if (!response.ok) throw new Error('Erro ao excluir');
+            const { error } = await supabase
+                .from('produtos')
+                .delete()
+                .eq('id', id);
+            if (error) throw error;
             produtos = produtos.filter(p => p.id !== id);
             renderizarCatalogo(); renderizarSecoesCuradas();
             if (adminVisible) renderizarAdminLista();
@@ -364,14 +370,12 @@
             data.numeracao = numeracao;
         }
         try {
-            const response = await fetch(`${API_BASE}/products`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data)
-            });
-            if (!response.ok) throw new Error('Erro ao salvar');
-            const result = await response.json();
-            produtos.push(result);
+            const { data: result, error } = await supabase
+                .from('produtos')
+                .insert([data])
+                .select();
+            if (error) throw error;
+            produtos.push(result[0]);
             renderizarCatalogo(); renderizarSecoesCuradas();
             if (adminVisible) renderizarAdminLista();
             document.getElementById('prodNome').value = ''; document.getElementById('prodDesc').value = '';
