@@ -200,6 +200,7 @@
         let sizeHtml = '';
         if (prod.categoria==='vestuario' && prod.tamanhos?.length) sizeHtml = `<div class="product-size-info">Tamanhos: ${prod.tamanhos.join(', ')}</div>`;
         else if (prod.categoria==='calcados' && prod.numeracao) sizeHtml = `<div class="product-size-info">Numeração: ${prod.numeracao}</div>`;
+        const descHtml = prod.descricao_completa ? `<p class="product-desc-preview">${escapeHtml(prod.descricao_completa)}</p>` : '';
         card.innerHTML = `
             <div class="product-image-container">
                 <span class="status-badge ${sClass}">${sLabel}</span>
@@ -210,6 +211,7 @@
                 <div class="product-category">${catLabel}</div>
                 <h3 class="product-title">${escapeHtml(prod.nome)}</h3>
                 <p class="product-price">${prod.preco}</p>
+                ${descHtml}
                 ${sizeHtml}
                 <button class="btn-add-cart${isSold?' disabled':''}" ${isSold?'disabled':''}><i class="fas fa-cart-plus"></i> ${isSold?'Indisponível':'Adicionar'}</button>
                 <button class="btn-details"><i class="fas fa-expand-alt"></i> Detalhes</button>
@@ -245,6 +247,30 @@
     }
 
     // ─── MODAL PRODUTO ────────────────────────────────────────────────────────
+    // Swipe na foto do modal
+    let modalImgs = [], modalImgIdx = 0;
+    (function setupModalSwipe() {
+        const mainImg = document.getElementById('modalMainImg');
+        let startX = 0, isDragging = false;
+        mainImg.addEventListener('touchstart', e => { startX = e.touches[0].clientX; isDragging = true; }, { passive: true });
+        mainImg.addEventListener('touchend', e => {
+            if (!isDragging) return;
+            isDragging = false;
+            const diff = startX - e.changedTouches[0].clientX;
+            if (Math.abs(diff) < 40) return;
+            if (diff > 0) modalNavImg(1); else modalNavImg(-1);
+        });
+    })();
+
+    function modalNavImg(dir) {
+        if (modalImgs.length <= 1) return;
+        modalImgIdx = (modalImgIdx + dir + modalImgs.length) % modalImgs.length;
+        const mainImg = document.getElementById('modalMainImg');
+        const thumbsDiv = document.getElementById('modalThumbs');
+        mainImg.src = modalImgs[modalImgIdx];
+        thumbsDiv.querySelectorAll('.modal-thumb').forEach((t, i) => t.classList.toggle('active', i === modalImgIdx));
+    }
+
     function abrirModal(prod) {
         document.getElementById('modalTitle').innerText = prod.nome;
         document.getElementById('modalCategory').innerText = CAT_LABEL[prod.categoria] || prod.categoria;
@@ -254,14 +280,15 @@
         if (prod.categoria==='vestuario'&&prod.tamanhos?.length) st = 'Tamanhos: '+prod.tamanhos.join(', ');
         else if (prod.categoria==='calcados'&&prod.numeracao) st = 'Numeração: '+prod.numeracao;
         document.getElementById('modalSize').innerHTML = st ? `<i class="fas fa-ruler"></i> ${st}` : '';
-        const imgs = prod.images||[];
+        modalImgs = prod.images||[];
+        modalImgIdx = 0;
         const mainImg = document.getElementById('modalMainImg');
         const thumbsDiv = document.getElementById('modalThumbs');
-        mainImg.src = imgs[0]||'';
+        mainImg.src = modalImgs[0]||'';
         thumbsDiv.innerHTML = '';
-        imgs.forEach((img,i) => {
+        modalImgs.forEach((img,i) => {
             const t = document.createElement('img'); t.src=img; t.className='modal-thumb'; if(i===0) t.classList.add('active');
-            t.addEventListener('click', () => { mainImg.src=img; thumbsDiv.querySelectorAll('.modal-thumb').forEach(x=>x.classList.remove('active')); t.classList.add('active'); });
+            t.addEventListener('click', () => { modalImgIdx=i; mainImg.src=img; thumbsDiv.querySelectorAll('.modal-thumb').forEach(x=>x.classList.remove('active')); t.classList.add('active'); });
             thumbsDiv.appendChild(t);
         });
         let extra = '';
