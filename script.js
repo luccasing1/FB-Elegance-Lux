@@ -349,13 +349,14 @@
         renderizarSecoesCuradas();
         showToast('💾 Salvando ordem...');
         try {
-            await Promise.all(
-                produtos.map((p, i) => sbFetch('PATCH', `/rest/v1/produtos?id=eq.${p.id}`, { ordem: i }))
+            const results = await Promise.all(
+                produtos.map((p, i) => sbFetch('PATCH', `/rest/v1/produtos?id=eq.${p.id}`, { ordem: i }).then(r => { console.log('ordem ok', p.id, i, r); return r; }))
             );
+            console.log('Ordem salva no Supabase:', results);
             showToast('✓ Ordem salva no servidor!');
         } catch(e) {
-            console.error('Erro ao salvar ordem:', e);
-            showToast('⚠️ Ordem salva só localmente: ' + e.message, true);
+            console.error('Erro ao salvar ordem no Supabase:', e);
+            showToast('⚠️ Erro: ' + e.message, true);
         }
     }
 
