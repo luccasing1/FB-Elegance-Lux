@@ -26,7 +26,20 @@
         return text ? JSON.parse(text) : [];
     }
 
-    async function dbGetAll()        { return sbFetch('GET',    '/rest/v1/produtos?select=*&order=created_at.desc'); }
+    async function dbGetAll() {
+        const data = await sbFetch('GET', '/rest/v1/produtos?select=*&order=created_at.desc');
+        // Aplica ordem customizada salva no localStorage
+        const savedOrder = JSON.parse(localStorage.getItem('fb_ordem') || '[]');
+        if (savedOrder.length) {
+            data.sort((a, b) => {
+                const ia = savedOrder.indexOf(a.id), ib = savedOrder.indexOf(b.id);
+                if (ia === -1 && ib === -1) return 0;
+                if (ia === -1) return 1; if (ib === -1) return -1;
+                return ia - ib;
+            });
+        }
+        return data;
+    }
     async function dbInsert(data)    { const r = await sbFetch('POST',  '/rest/v1/produtos', data); return Array.isArray(r) ? r[0] : r; }
     async function dbUpdate(id, data){ const r = await sbFetch('PATCH', `/rest/v1/produtos?id=eq.${id}`, data); return Array.isArray(r) ? r[0] : r; }
     async function dbDelete(id)      { await sbFetch('DELETE', `/rest/v1/produtos?id=eq.${id}`); }
@@ -330,15 +343,35 @@
     }
 
     // ─── ADMIN: LISTA ─────────────────────────────────────────────────────────
+    function salvarOrdem() {
+        localStorage.setItem('fb_ordem', JSON.stringify(produtos.map(p => p.id)));
+        renderizarCatalogo();
+        renderizarSecoesCuradas();
+        showToast('✓ Ordem salva!');
+    }
+
     function renderizarAdminLista() {
         const c = document.getElementById('adminListaContainer');
         if (!c) return;
         if (!produtos.length) { c.innerHTML='<div style="padding:20px;text-align:center;color:#aaa;">Nenhum produto cadastrado</div>'; return; }
         c.innerHTML = '';
         const ST = { disponiveis:'✓ Disponível', lancamentos:'⭐ Lançamento', embreve:'⏳ Em breve', vendido:'🔴 Vendido' };
+
+        // Instrução de drag
+        const hint = document.createElement('div');
+        hint.style.cssText = 'text-align:center;font-size:0.75rem;color:#888;padding:8px 0 16px;user-select:none;';
+        hint.innerHTML = '☰ Arraste os itens para reordenar o acervo';
+        c.appendChild(hint);
+
+        let dragSrc = null;
+
         produtos.forEach(prod => {
-            const div = document.createElement('div'); div.className='admin-item';
+            const div = document.createElement('div');
+            div.className = 'admin-item';
+            div.draggable = true;
+            div.dataset.id = prod.id;
             div.innerHTML = `
+                <div class="admin-drag-handle" title="Arrastar">☰</div>
                 <div class="admin-item-info">
                     <strong>${escapeHtml(prod.nome)}</strong>
                     <span style="color:#b88b4a">${prod.categoria.toUpperCase()}</span>
@@ -351,12 +384,69 @@
                     <button class="mark-sold" data-id="${prod.id}" data-status="${prod.status}">${prod.status==='vendido'?'🔄 Reativar':'🏷️ Marcar vendido'}</button>
                     <button class="delete-prod" data-id="${prod.id}">🗑️ Remover</button>
                 </div>`;
+
+            // ── Drag & Drop (desktop) ──
+            div.addEventListener('dragstart', e => {
+                dragSrc = div;
+                e.dataTransfer.effectAllowed = 'move';
+                div.style.opacity = '0.4';
+            });
+            div.addEventListener('dragend', () => {
+                div.style.opacity = '';
+                c.querySelectorAll('.admin-item').forEach(el => el.classList.remove('drag-over'));
+            });
+            div.addEventListener('dragover', e => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+                if (div !== dragSrc) div.classList.add('drag-over');
+            });
+            div.addEventListener('dragleave', () => div.classList.remove('drag-over'));
+            div.addEventListener('drop', e => {
+                e.preventDefault();
+                div.classList.remove('drag-over');
+                if (!dragSrc || dragSrc === div) return;
+                const ids = [...c.querySelectorAll('.admin-item')].map(el => el.dataset.id);
+                const fromIdx = ids.indexOf(dragSrc.dataset.id);
+                const toIdx   = ids.indexOf(div.dataset.id);
+                produtos.splice(toIdx, 0, produtos.splice(fromIdx, 1)[0]);
+                salvarOrdem();
+                renderizarAdminLista();
+            });
+
+            // ── Touch drag (mobile) ──
+            let touchY = 0;
+            div.querySelector('.admin-drag-handle').addEventListener('touchstart', e => {
+                touchY = e.touches[0].clientY;
+                div.style.background = '#1e1e1e';
+            }, { passive: true });
+            div.querySelector('.admin-drag-handle').addEventListener('touchmove', e => {
+                e.preventDefault();
+                const deltaY = e.touches[0].clientY - touchY;
+                const items = [...c.querySelectorAll('.admin-item')];
+                const idx = items.indexOf(div);
+                if (deltaY < -40 && idx > 0) {
+                    c.insertBefore(div, items[idx - 1]);
+                    touchY = e.touches[0].clientY;
+                } else if (deltaY > 40 && idx < items.length - 1) {
+                    c.insertBefore(items[idx + 1], div);
+                    touchY = e.touches[0].clientY;
+                }
+            }, { passive: false });
+            div.querySelector('.admin-drag-handle').addEventListener('touchend', () => {
+                div.style.background = '';
+                const newOrder = [...c.querySelectorAll('.admin-item')].map(el => el.dataset.id);
+                produtos.sort((a, b) => newOrder.indexOf(a.id) - newOrder.indexOf(b.id));
+                salvarOrdem();
+            });
+
             c.appendChild(div);
         });
+
         c.querySelectorAll('.edit-ad').forEach(b => b.addEventListener('click', () => { const p=produtos.find(x=>x.id===b.dataset.id); if(p) abrirEdicao(p); }));
         c.querySelectorAll('.mark-sold').forEach(b => b.addEventListener('click', () => alternarVendido(b.dataset.id, b.dataset.status)));
         c.querySelectorAll('.delete-prod').forEach(b => b.addEventListener('click', () => excluirProduto(b.dataset.id)));
     }
+
 
     // ─── ADMIN: ADICIONAR ─────────────────────────────────────────────────────
     async function adicionarProduto() {
