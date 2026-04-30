@@ -27,7 +27,7 @@
     }
 
     async function dbGetAll() {
-        const data = await sbFetch('GET', '/rest/v1/produtos?select=*&order=created_at.desc');
+        const data = await sbFetch('GET', '/rest/v1/produtos?select=*&order=ordem.asc.nullslast,created_at.desc');
         // Aplica ordem customizada salva no localStorage
         const savedOrder = JSON.parse(localStorage.getItem('fb_ordem') || '[]');
         if (savedOrder.length) {
@@ -343,11 +343,20 @@
     }
 
     // ─── ADMIN: LISTA ─────────────────────────────────────────────────────────
-    function salvarOrdem() {
+    async function salvarOrdem() {
         localStorage.setItem('fb_ordem', JSON.stringify(produtos.map(p => p.id)));
         renderizarCatalogo();
         renderizarSecoesCuradas();
-        showToast('✓ Ordem salva!');
+        showToast('💾 Salvando ordem...');
+        try {
+            await Promise.all(
+                produtos.map((p, i) => sbFetch('PATCH', `/rest/v1/produtos?id=eq.${p.id}`, { ordem: i }))
+            );
+            showToast('✓ Ordem salva no servidor!');
+        } catch(e) {
+            console.error('Erro ao salvar ordem:', e);
+            showToast('⚠️ Ordem salva só localmente: ' + e.message, true);
+        }
     }
 
     function renderizarAdminLista() {
