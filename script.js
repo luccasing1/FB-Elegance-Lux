@@ -27,7 +27,7 @@
     }
 
     async function dbGetAll() {
-        const data = await sbFetch('GET', '/rest/v1/produtos?select=*&order=ordem.asc.nullslast,created_at.desc');
+        const data = await sbFetch('GET', '/rest/v1/produtos?select=*&order=ordem.asc.nullslast');
         // Aplica ordem customizada salva no localStorage
         const savedOrder = JSON.parse(localStorage.getItem('fb_ordem') || '[]');
         if (savedOrder.length) {
@@ -349,14 +349,13 @@
         renderizarSecoesCuradas();
         showToast('💾 Salvando ordem...');
         try {
-            const results = await Promise.all(
-                produtos.map((p, i) => sbFetch('PATCH', `/rest/v1/produtos?id=eq.${p.id}`, { ordem: i }).then(r => { console.log('ordem ok', p.id, i, r); return r; }))
+            await Promise.all(
+                produtos.map((p, i) => sbFetch('PATCH', `/rest/v1/produtos?id=eq.${p.id}`, { ordem: i }))
             );
-            console.log('Ordem salva no Supabase:', results);
-            showToast('✓ Ordem salva no servidor!');
+            showToast('✓ Ordem salva!');
         } catch(e) {
-            console.error('Erro ao salvar ordem no Supabase:', e);
-            showToast('⚠️ Erro: ' + e.message, true);
+            console.error('Erro ao salvar ordem:', e);
+            showToast('⚠️ Erro ao salvar: ' + e.message, true);
         }
     }
 
