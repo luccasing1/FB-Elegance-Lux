@@ -259,13 +259,27 @@
         const imgs = prod.images||[];
         const mainImg = document.getElementById('modalMainImg');
         const thumbsDiv = document.getElementById('modalThumbs');
+        let currentIdx = 0;
+        function goToImg(idx) {
+            if (!imgs.length) return;
+            currentIdx = (idx + imgs.length) % imgs.length;
+            mainImg.src = imgs[currentIdx];
+            thumbsDiv.querySelectorAll('.modal-thumb').forEach((t,i) => t.classList.toggle('active', i===currentIdx));
+        }
         mainImg.src = imgs[0]||'';
         thumbsDiv.innerHTML = '';
         imgs.forEach((img,i) => {
             const t = document.createElement('img'); t.src=img; t.className='modal-thumb'; if(i===0) t.classList.add('active');
-            t.addEventListener('click', () => { mainImg.src=img; thumbsDiv.querySelectorAll('.modal-thumb').forEach(x=>x.classList.remove('active')); t.classList.add('active'); });
+            t.addEventListener('click', () => goToImg(i));
             thumbsDiv.appendChild(t);
         });
+        let touchStartX = 0;
+        mainImg.style.cursor = 'grab';
+        mainImg.ontouchstart = e => { touchStartX = e.changedTouches[0].clientX; };
+        mainImg.ontouchend = e => {
+            const dx = e.changedTouches[0].clientX - touchStartX;
+            if (Math.abs(dx) > 40) goToImg(dx < 0 ? currentIdx + 1 : currentIdx - 1);
+        };
         let extra = '';
         if ((prod.categoria==='vestuario'||prod.categoria==='shorts')&&prod.tamanhos) extra = ` - Tamanhos: ${prod.tamanhos.join(', ')}`;
         if (prod.categoria==='calcados'&&prod.numeracao) extra = ` - Numeração: ${prod.numeracao}`;
