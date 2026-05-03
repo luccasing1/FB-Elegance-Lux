@@ -273,6 +273,13 @@
             t.addEventListener('click', () => goToImg(i));
             thumbsDiv.appendChild(t);
         });
+        // Setas desktop
+        const navLeft = document.getElementById('modalNavLeft');
+        const navRight = document.getElementById('modalNavRight');
+        if (imgs.length <= 1) { navLeft.classList.add('hidden'); navRight.classList.add('hidden'); }
+        else { navLeft.classList.remove('hidden'); navRight.classList.remove('hidden'); }
+        navLeft.onclick = () => goToImg(currentIdx - 1);
+        navRight.onclick = () => goToImg(currentIdx + 1);
         let touchStartX = 0, touchStartY = 0, isSwiping = false;
         mainImg.style.cursor = 'grab';
         mainImg.addEventListener('touchstart', e => {
