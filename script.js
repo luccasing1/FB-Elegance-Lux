@@ -273,13 +273,23 @@
             t.addEventListener('click', () => goToImg(i));
             thumbsDiv.appendChild(t);
         });
-        let touchStartX = 0;
+        let touchStartX = 0, touchStartY = 0, isSwiping = false;
         mainImg.style.cursor = 'grab';
-        mainImg.ontouchstart = e => { touchStartX = e.changedTouches[0].clientX; };
-        mainImg.ontouchend = e => {
+        mainImg.addEventListener('touchstart', e => {
+            touchStartX = e.touches[0].clientX;
+            touchStartY = e.touches[0].clientY;
+            isSwiping = false;
+        }, { passive: true });
+        mainImg.addEventListener('touchmove', e => {
+            const dx = Math.abs(e.touches[0].clientX - touchStartX);
+            const dy = Math.abs(e.touches[0].clientY - touchStartY);
+            if (dx > dy && dx > 8) { isSwiping = true; e.preventDefault(); }
+        }, { passive: false });
+        mainImg.addEventListener('touchend', e => {
+            if (!isSwiping) return;
             const dx = e.changedTouches[0].clientX - touchStartX;
-            if (Math.abs(dx) > 40) goToImg(dx < 0 ? currentIdx + 1 : currentIdx - 1);
-        };
+            if (Math.abs(dx) > 35) goToImg(dx < 0 ? currentIdx + 1 : currentIdx - 1);
+        }, { passive: true });
         let extra = '';
         if ((prod.categoria==='vestuario'||prod.categoria==='shorts')&&prod.tamanhos) extra = ` - Tamanhos: ${prod.tamanhos.join(', ')}`;
         if (prod.categoria==='calcados'&&prod.numeracao) extra = ` - Numeração: ${prod.numeracao}`;
